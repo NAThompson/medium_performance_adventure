@@ -227,3 +227,5 @@ gcc and Apple clang just don't get it. . .
 ---
 
 ## packed divisions?
+
+What about `-ffast-math`?
