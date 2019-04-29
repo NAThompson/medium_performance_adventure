@@ -83,4 +83,84 @@ BENCHMARK_MAIN();
 
 ---
 
-## Alright let's perf
+## benchmark
+
+![inline](figures/first_attempt_bench.png)
+
+---
+
+## perf is no surprise-all in sin
+
+![inline](figures/first_attempt_perf.png)
+
+---
+
+## Wisdom
+
+> If you're spending a lot of time evaluating sines and cosines, you're doing something wrong
+
+Use $$\sin(\pi\theta - \pi i) = (-1)^{i}\sin(\pi\theta)$$.
+
+$$s(t) = \frac{\sin\left(\frac{\pi (t - t_0)}{h}\right)}{\pi}\sum_{i=0}^{n-1} \frac{(-1)^{i}y_{i}}{\pi (t - t_0)}{h} - \pi i}$$
+
+---
+
+## Second attempt
+
+```cpp
+Real operator()(Real t) const {
+    Real x = (t-t0_)/h_;
+    Real s = 0;
+    for (size_t i = 0; i < y_.size(); ++i) {
+        Real term = y_[i]/(x-i);
+        if(i & 1) {
+            s -= term;
+        }
+        else {
+            s += term;
+        }
+    }
+    return s*sin(pi<Real>()*x)/pi<Real>();
+}
+```
+
+---
+
+## An order of magnitude faster:
+
+![inline](figures/second_attempt_bench.png)
+
+---
+
+## But this gives a catastrophic drop in accuracy
+
+So instead of `sin(pi<Real>*x)`, compute `boost::math::sin_pi(x)`.
+
+---
+
+## Now what's slow?
+
+![inline](figures/second_attempt_perf.png)
+
+---
+
+## Converting integers to floats is slow
+
+The cvtsi2sd instruction is super slow! Can we get rid of it?
+
+Also, the add and subtracts are suspiciously slow. Are they misattributed branch mispredicts?
+
+---
+
+## perf stat
+
+Looks like the branch predictor is doing well here:
+
+```bash
+$ perf stat ./a.out --benchmark_filter=BM_WhittakerShannon2
+```
+![inline](figures/second_attempt_stat.png)
+
+---
+
+## pushing forward
