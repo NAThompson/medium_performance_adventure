@@ -110,7 +110,11 @@ public:
 
   Real operator()(Real t) const {
       Real x = (t-t0_)/h_;
-      Real s = 0;
+      Real y0 = 0;
+      Real y1 = 0;
+      Real y2 = 0;
+      Real y3 = 0;
+
       Real z0 = x;
       Real z1 = x - 1;
       Real z2 = x - 2;
@@ -124,10 +128,10 @@ public:
           Real k2 = 1/z2;
           Real k3 = 1/z3;
 
-          s += (*it)*k0;
-          s += (*it+1)*k1;
-          s += (*it+2)*k2;
-          s += (*it+3)*k3;
+          y0 += (*it)*k0;
+          y1 += (*it+1)*k1;
+          y2 += (*it+2)*k2;
+          y3 += (*it+3)*k3;
 
           z0 -= 4;
           z1 -= 4;
@@ -136,6 +140,7 @@ public:
 
           it += 4;
       }
+      Real s = y0 + y1 + y2 + y3;
       return s*sin(pi<Real>()*x)/pi<Real>();
   }
 private:
