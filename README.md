@@ -152,15 +152,78 @@ Also, the add and subtracts are suspiciously slow. Are they misattributed branch
 
 ---
 
-## perf stat
+## Third Attempt
 
-Looks like the branch predictor is doing well here:
+```cpp
+Real operator()(Real t) const {
+    Real x = (t-t0_)/h_;
+    Real s = 0;
 
-```bash
-$ perf stat ./a.out --benchmark_filter=BM_WhittakerShannon2
+    Real z = x;
+    auto it = y_.begin();
+    auto end = y_.end();
+    while (it != end) {
+        s += *it++/z;
+        z -= 1;
+    }
+    return s*sin(pi<Real>()*x)/pi<Real>();
+}
 ```
-![inline](figures/second_attempt_stat.png)
+
+This gives speedup on clang, but not gcc . . .
 
 ---
 
-## pushing forward
+## No SIMD? We can fix that
+
+```cpp
+Real operator()(Real t) const {
+    Real x = (t-t0_)/h_;
+    Real y0 = 0;
+    Real y1 = 0;
+    Real y2 = 0;
+    Real y3 = 0;
+
+    Real z0 = x;
+    Real z1 = x - 1;
+    Real z2 = x - 2;
+    Real z3 = x - 3;
+
+    auto it = y_.begin();
+    auto end = y_.end();
+    while (it != end) {
+        Real k0 = 1/z0;
+        Real k1 = 1/z1;
+        Real k2 = 1/z2;
+        Real k3 = 1/z3;
+
+        y0 += (*it)*k0;
+        y1 += (*it+1)*k1;
+        y2 += (*it+2)*k2;
+        y3 += (*it+3)*k3;
+
+        z0 -= 4;
+        z1 -= 4;
+        z2 -= 4;
+        z3 -= 4;
+
+        it += 4;
+    }
+    Real s = y0 + y1 + y2 + y3;
+    return s*sin(pi<Real>()*x)/pi<Real>();
+}
+```
+
+I feel like I've made it obvious what I want here, but only clang 6 actually vectorizes this.
+
+gcc and Apple clang just don't get it. . .
+
+---
+
+## clang perf
+
+![inline](figures/fourth_attempt_bench.png)
+
+---
+
+## packed divisions?
